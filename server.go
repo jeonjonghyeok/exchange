@@ -7,49 +7,51 @@ import (
 	"github.com/tutorialedge/go-grpc-beginners-tutorial/chat"
 	"google.golang.org/grpc"
 	gecko "github.com/superoo7/go-gecko/v3"
+	"github.com/go-redis/redis"
+	"time"
 )
 
 type crypto struct{
 	name string
-	currentprice float32
-	price map[string]int
+	price float32
 }
 type wallet struct {
 	krw float32
 	crypto map[string]float32
 }
-
-func quote() {
-	choiceCrypto:=0
-	for {
-		Println("1. 비트코인: ")
-		Println("2. 이더리움: ")
-
+func quoteGet(client *redis.Client, cryptos []crypto) {
 		cg:= gecko.NewClient(nil)
-
 		ids:= []string{"bitcoin","ethereum"}
 		vc:= []string{"usd","myr"}
+		for {
+			time.Sleep(time.Second*1)
 		sp, err := cg.SimplePrice(ids,vc)
 		if err!=nil {
 			log.Fatal(err)
 		}
-		bitcoin := (*sp)["bitcoin"]
-		eth := (*sp)["ethereum"]
-		Println(Sprintf("Bitcoin is worth %f usd (myr %f)", bitcoin["usd"],bitcoin["myr"]))
-		Println(Sprintf("Ethereum is worth %f usd (myr %f)", eth["usd"],eth["myr"]))
-
-
-		Println("거래할 화폐 선택")
-		Scanln(&choiceCrypto)
-		switch choiceCrypto {
-			case 1:
-				order(1)
-			case 2:
-				order(2)
-			default :
-				break
+		for i:=0;i<2;i++ {
+			cryptos[i].price = (*sp)[cryptos[i].name]["usd"]
+			err = client.Set(client.Context(),Sprint("%s",cryptos[i].name),cryptos[i].price,0).Err()
+		}
+		if err != nil {
+			Println(err)
 		}
 	}
+
+}
+
+func quote(client *redis.Client,cryptos []crypto) {
+
+
+		for i:=0;i<2;i++ {
+		val, err := client.Get(client.Context(),Sprint("%s",cryptos[i].name)).Result()
+		Println(cryptos[i].name,val)
+			if err != nil {
+				Println(err)
+			}
+		}
+
+		Scanln()
 
 }
 func order(choiceCrypto int) {
@@ -70,6 +72,24 @@ func main() {
 			Println(r)
 		}
 	}()
+/*	client:= redis.NewClient(&redis.Options{
+		Addr: "localhost:6379",
+		Password: "",
+		DB: 0,
+	})
+	*/
+
+	//pong, err := client.Ping(client.Context()).Result()
+	//Println(pong,err)
+	client:= redis.NewClient(&redis.Options{
+		Addr: "localhost:6379",
+		Password: "",
+		DB: 0,
+	})
+		cryptos := make([]crypto,5)
+		cryptos[0].name = "bitcoin"
+		cryptos[1].name = "ethereum"
+		go quoteGet(client, cryptos)
 	for {
 
 	Println("1. 시세 확인")
@@ -84,7 +104,7 @@ func main() {
 	switch num {
 		case 1:
 			Println("**********시세확인***********")
-			quote()
+			quote(client,cryptos)
 			Println("엔터를 입력하면 메뉴 화면으로 돌아갑니다.")
 			Scanln()
 		case 2:
@@ -100,7 +120,7 @@ func main() {
 			Println("엔터를 입력하면 메뉴 화면으로 돌아갑니다.")
 			Scanln()
 		case 5:
-			Println("**********프로그램 종료***********")
+			panic("프로그램종료")
 			Println("엔터를 입력하면 메뉴 화면으로 돌아갑니다.")
 			Scanln()
 		default:
