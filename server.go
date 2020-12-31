@@ -11,18 +11,31 @@ import (
 	"time"
 )
 
-type crypto struct{
+type Crypto struct{
 	name string
 	price float32
 }
-type wallet struct {
-	krw float32
+type Wallet struct {
 	crypto map[string]float32
+	krw float32
 }
-func quoteGet(client *redis.Client, cryptos []crypto) {
+type Order struct {
+	status string
+	isbuy string
+
+
+}
+func newWallet() *Wallet {
+	w:= Wallet{}
+	w.krw = 100000
+	w.crypto = map[string]float32{}
+	return &w
+}
+func setQuote(client *redis.Client, cryptos []Crypto) {
 		cg:= gecko.NewClient(nil)
 		ids:= []string{"bitcoin","ethereum"}
-		vc:= []string{"usd","myr"}
+		vc:= []string{"usd","krw"}
+
 		for {
 			time.Sleep(time.Second*1)
 		sp, err := cg.SimplePrice(ids,vc)
@@ -31,7 +44,14 @@ func quoteGet(client *redis.Client, cryptos []crypto) {
 		}
 		for i:=0;i<2;i++ {
 			cryptos[i].price = (*sp)[cryptos[i].name]["usd"]
+			/*json, err1 := json.Marshal(cryptos[i])
+			if err1 != nil {
+				Println(err1)
+			}
+			*/
 			err = client.Set(client.Context(),Sprint("%s",cryptos[i].name),cryptos[i].price,0).Err()
+
+			//err = client.Set(client.Context(),Sprint("%s",cryptos[i].name),cryptos[i].price,0).Err()
 		}
 		if err != nil {
 			Println(err)
@@ -40,31 +60,69 @@ func quoteGet(client *redis.Client, cryptos []crypto) {
 
 }
 
-func quote(client *redis.Client,cryptos []crypto) {
+func getQuote(client *redis.Client,cryptos []Crypto) {
 
 
 		for i:=0;i<2;i++ {
 		val, err := client.Get(client.Context(),Sprint("%s",cryptos[i].name)).Result()
-		Println(cryptos[i].name,val)
+		Println(i+1,cryptos[i].name,val)
 			if err != nil {
 				Println(err)
 			}
 		}
 
-		Scanln()
+
+}
+func sellOrder() {
+
 
 }
 func order(choiceCrypto int) {
-	Println(choiceCrypto,"를 선택하셨습니다.")
-	Println("1. 매도")
-	Println("2. 매수")
-	Scanln()
+
+	var choicePrice, choiceAmount int
+	Println("주문가 선택")
+	Scanln(&choicePrice)
+	Println("주문량 선택")
+	Scanln(&choiceAmount)
+
+	//go
+
 }
-func sellCrypto() {
+func sellCrypto(client *redis.Client, cryptos []Crypto) {
+	defer func() {
+		if r:= recover(); r!=nil {
+			Println(r)
+		}
+	}()
 	Println("매도")
+	getQuote(client,cryptos)
+	var choiceCrypto int
+	Println("매도할 Crypto를 선택하세요")
+	Scanln(&choiceCrypto)
+
+	switch choiceCrypto {
+		case 1:
+			Println("비트코인 주문")
+		case 2:
+			Println("이더리움 주문")
+		default :
+			panic("잘못 입력하였습니다.")
+
+	}
+
+
+
+
 }
 func buyCrypto() {
 	Println("매수")
+}
+func wallet(w *Wallet) {
+	Println("지갑 확인")
+	w.crypto["bitcoin"] = 1.2221
+	for key,val:=range w.crypto {
+		Println(key,"보유량:",val)
+	}
 }
 func main() {
 	defer func() {
@@ -72,24 +130,17 @@ func main() {
 			Println(r)
 		}
 	}()
-/*	client:= redis.NewClient(&redis.Options{
-		Addr: "localhost:6379",
-		Password: "",
-		DB: 0,
-	})
-	*/
+	w := newWallet()
 
-	//pong, err := client.Ping(client.Context()).Result()
-	//Println(pong,err)
 	client:= redis.NewClient(&redis.Options{
 		Addr: "localhost:6379",
 		Password: "",
 		DB: 0,
 	})
-		cryptos := make([]crypto,5)
+		cryptos := make([]Crypto,5)
 		cryptos[0].name = "bitcoin"
 		cryptos[1].name = "ethereum"
-		go quoteGet(client, cryptos)
+		go setQuote(client, cryptos)
 	for {
 
 	Println("1. 시세 확인")
@@ -104,15 +155,17 @@ func main() {
 	switch num {
 		case 1:
 			Println("**********시세확인***********")
-			quote(client,cryptos)
+			getQuote(client,cryptos)
 			Println("엔터를 입력하면 메뉴 화면으로 돌아갑니다.")
 			Scanln()
 		case 2:
 			Println("**********지갑***********")
+			wallet(w)
 			Println("엔터를 입력하면 메뉴 화면으로 돌아갑니다.")
 			Scanln()
 		case 3:
 			Println("**********매도 주문***********")
+			sellCrypto(client,cryptos)
 			Println("엔터를 입력하면 메뉴 화면으로 돌아갑니다.")
 			Scanln()
 		case 4:
