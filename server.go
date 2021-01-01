@@ -73,46 +73,43 @@ func getQuote(client *redis.Client,cryptos []Crypto) {
 
 
 }
-func sellOrder() {
+func sellOrder(choiceCrypto int, amount int, price int, chs []chan bool) {
+
+	chs[0] <- true
+
+
 
 
 }
-func order(choiceCrypto int) {
+func order(choiceCrypto int, chs []chan bool) {
+	choiceOrder :=0
 
-	var choicePrice, choiceAmount int
-	Println("주문가 선택")
-	Scanln(&choicePrice)
-	Println("주문량 선택")
-	Scanln(&choiceAmount)
+	Println("1. 매도")
+	Println("2. 매수")
+	Scanln(&choiceOrder)
+	if choiceOrder == 1 {
+		sellCrypto(choiceCrypto, chs)
+	}
+
 
 	//go
 
 }
-func sellCrypto(client *redis.Client, cryptos []Crypto) {
+func sellCrypto(choiceCrypto int, chs []chan bool) {
 	defer func() {
 		if r:= recover(); r!=nil {
 			Println(r)
 		}
 	}()
-	Println("매도")
-	getQuote(client,cryptos)
-	var choiceCrypto int
-	Println("매도할 Crypto를 선택하세요")
-	Scanln(&choiceCrypto)
-
-	switch choiceCrypto {
-		case 1:
-			Println("비트코인 주문")
-		case 2:
-			Println("이더리움 주문")
-		default :
-			panic("잘못 입력하였습니다.")
-
-	}
 
 
-
-
+	amount := 0
+	price := 0
+	Println("매도량")
+	Scanln(&amount)
+	Println("매도할 금액")
+	Scanln(&price)
+	go sellOrder(choiceCrypto,amount,price,chs)
 }
 func buyCrypto() {
 	Println("매수")
@@ -132,6 +129,14 @@ func main() {
 	}()
 	w := newWallet()
 
+	var chs = make([]chan bool, 5)
+	for i:=0;i<5;i++ {
+		chs[i] = make(chan bool)
+	}
+
+
+
+
 	client:= redis.NewClient(&redis.Options{
 		Addr: "localhost:6379",
 		Password: "",
@@ -145,9 +150,8 @@ func main() {
 
 	Println("1. 시세 확인")
 	Println("2. 지갑 확인")
-	Println("3. 매도 주문")
-	Println("4. 매수 주문")
-	Println("5. 프로그램 종료")
+	Println("3. 주문")
+	Println("4. 프로그램 종료")
 
 	var num int
 	Scanln(&num)
@@ -164,15 +168,17 @@ func main() {
 			Println("엔터를 입력하면 메뉴 화면으로 돌아갑니다.")
 			Scanln()
 		case 3:
-			Println("**********매도 주문***********")
-			sellCrypto(client,cryptos)
+			Println("**********주문***********")
+			Println("구매할 Crypto 선택")
+			choiceCrypto := 0
+			getQuote(client,cryptos)
+			Scanln(&choiceCrypto)
+			order(choiceCrypto,chs)
+
+
 			Println("엔터를 입력하면 메뉴 화면으로 돌아갑니다.")
 			Scanln()
 		case 4:
-			Println("**********매수 주문***********")
-			Println("엔터를 입력하면 메뉴 화면으로 돌아갑니다.")
-			Scanln()
-		case 5:
 			panic("프로그램종료")
 			Println("엔터를 입력하면 메뉴 화면으로 돌아갑니다.")
 			Scanln()
