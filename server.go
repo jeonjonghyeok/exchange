@@ -8,7 +8,7 @@ import (
 	"google.golang.org/grpc"
 	gecko "github.com/superoo7/go-gecko/v3"
 	"github.com/go-redis/redis"
-	"time"
+	//"time"
 )
 
 type Crypto struct{
@@ -26,6 +26,101 @@ type Order struct {
 	price float32
 	ch int
 }
+// heap
+type minheap struct {
+    heapArray []Order
+    size      int
+    maxsize   int
+}
+
+func newMinHeap(maxsize int) *minheap {
+    minheap := &minheap{
+        heapArray: []Order{},
+        size:      0,
+        maxsize:   maxsize,
+    }
+    return minheap
+}
+
+func (m *minheap) leaf(index int) bool {
+    if index >= (m.size/2) && index <= m.size {
+        return true
+    }
+    return false
+}
+
+func (m *minheap) parent(index int) int {
+    return (index - 1) / 2
+}
+
+func (m *minheap) leftchild(index int) int {
+    return 2*index + 1
+}
+
+func (m *minheap) rightchild(index int) int {
+    return 2*index + 2
+}
+
+func (m *minheap) insert(item Order) error {
+    if m.size >= m.maxsize {
+        return Errorf("Heap is ful")
+    }
+    m.heapArray = append(m.heapArray, item)
+    m.size++
+    m.upHeapify(m.size - 1)
+    return nil
+}
+
+func (m *minheap) swap(first, second int) {
+    temp := m.heapArray[first]
+    m.heapArray[first] = m.heapArray[second]
+    m.heapArray[second] = temp
+}
+
+func (m *minheap) upHeapify(index int) {
+    for m.heapArray[index].price < m.heapArray[m.parent(index)].price {
+        m.swap(index, m.parent(index))
+        index = m.parent(index)
+    }
+}
+
+func (m *minheap) downHeapify(current int) {
+    if m.leaf(current) {
+        return
+    }
+    smallest := current
+    leftChildIndex := m.leftchild(current)
+    rightRightIndex := m.rightchild(current)
+    //If current is smallest then return
+    if leftChildIndex < m.size && m.heapArray[leftChildIndex].price < m.heapArray[smallest].price {
+        smallest = leftChildIndex
+			}
+    if rightRightIndex < m.size && m.heapArray[rightRightIndex].price < m.heapArray[smallest].price {
+        smallest = rightRightIndex
+    }
+    if smallest != current {
+        m.swap(current, smallest)
+        m.downHeapify(smallest)
+    }
+    return
+}
+func (m *minheap) buildMinHeap() {
+    for index := ((m.size / 2) - 1); index >= 0; index-- {
+        m.downHeapify(index)
+    }
+}
+
+func (m *minheap) remove() Order {
+    top := m.heapArray[0]
+    m.heapArray[0] = m.heapArray[m.size-1]
+    m.heapArray = m.heapArray[:(m.size)-1]
+    m.size--
+    m.downHeapify(0)
+    return top
+}
+
+
+
 func newWallet() *Wallet {
 	w:= Wallet{}
 	w.krw = 100000
@@ -33,18 +128,18 @@ func newWallet() *Wallet {
 	w.crypto["bitcoin"]=10000
 	return &w
 }
-func setQuote(client *redis.Client, cryptos []Crypto) {
+func setQuote(client *redis.Client, cryptos []Crypto,ids []string) {
 		cg:= gecko.NewClient(nil)
-		ids:= []string{"bitcoin","ethereum"}
+		//ids:= []string{"bitcoin","ethereum","tether","ripple","polkadot","litecoin","bitcoin-cash"}
 		vc:= []string{"usd","krw"}
 
 		for {
-			time.Sleep(time.Second*1)
+			//time.Sleep(time.Second*1)
 		sp, err := cg.SimplePrice(ids,vc)
 		if err!=nil {
 			log.Fatal(err)
 		}
-		for i:=0;i<2;i++ {
+		for i:=0;i<len(cryptos);i++ {
 			cryptos[i].price = (*sp)[cryptos[i].name]["usd"]
 			/*json, err1 := json.Marshal(cryptos[i])
 			if err1 != nil {
@@ -59,7 +154,7 @@ func setQuote(client *redis.Client, cryptos []Crypto) {
 	}
 }
 func getQuote(client *redis.Client,cryptos []Crypto) {
-		for i:=0;i<2;i++ {
+		for i:=0;i<len(cryptos);i++ {
 		val, err := client.Get(client.Context(),Sprint("%s",cryptos[i].name)).Result()
 		Println(i+1,cryptos[i].name,val)
 			if err != nil {
@@ -193,7 +288,12 @@ func wallet(w *Wallet) {
 		Println(key,"보유량:",val)
 	}
 }
-func heapSort(order []Order) {
+func heapInsert(heap []Order,item Order) {
+
+
+
+}
+func heapDelete(heap []Order,item int) {
 
 
 }
@@ -225,10 +325,13 @@ func main() {
 		Password: "",
 		DB: 0,
 	})
-		cryptos := make([]Crypto,5)
-		cryptos[0].name = "bitcoin"
-		cryptos[1].name = "ethereum"
-		go setQuote(client, cryptos)
+		cryptos := make([]Crypto,7)
+		var cryptosname []string = []string{"bitcoin","ethereum","tether","ripple","polkadot","litecoin","bitcoin-cash"}
+		for j:=0;j<len(cryptos);j++ {
+			cryptos[j].name = cryptosname[j]
+		}
+
+		go setQuote(client, cryptos,cryptosname)
 
 	for {
 
