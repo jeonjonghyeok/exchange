@@ -162,7 +162,7 @@ func getQuote(client *redis.Client,cryptos []Crypto) {
 			}
 		}
 }
-func sellOrder(choiceCrypto int, amount float32, price float32, chs []chan float32,heap []Order, order string,w *Wallet) {
+func orderTx(choiceCrypto int, amount float32, price float32, chs []chan float32,heap []Order, order string,w *Wallet) {
 	defer func() {
 		if r:=recover(); r!=nil {
 			Println(r)
@@ -175,6 +175,16 @@ func sellOrder(choiceCrypto int, amount float32, price float32, chs []chan float
 			crypto = "bitcoin"
 		case 2:
 			crypto = "ethereum"
+		case 3:
+			crypto = "tether"
+		case 4:
+			crypto = "ripple"
+		case 5:
+			crypto = "polkadot"
+		case 6:
+			crypto = "litecoin"
+		case 7:
+			crypto = "bitcoin-cash"
 	}
 	ch = -1
 	for i:=4;i>=0;i-- {
@@ -274,7 +284,7 @@ func order(choiceCrypto int, chs []chan float32,heap []Order,w *Wallet) {
 
 		Println("보유원화:",w.krw)
 		Println("총 금액:",price*amount)
-		go sellOrder(choiceCrypto,amount,price,chs,heap, order,w)
+		go orderTx(choiceCrypto,amount,price,chs,heap, order,w)
 	} else {
 		panic("잘못입력하였습니다.")
 	}
@@ -288,20 +298,26 @@ func wallet(w *Wallet) {
 		Println(key,"보유량:",val)
 	}
 }
-func heapInsert(heap []Order,item Order) {
-
-
-
-}
-func heapDelete(heap []Order,item int) {
-
-
-}
 func checkOrder(heap []Order) {
 	for i:=0;i<5;i++ {
 		Println(heap[i])
 	}
 
+}
+func orderMenu(client *redis.Client, cryptos []Crypto, chs [][]chan float32,heap [][]Order,w *Wallet) {
+	defer func() {
+		if r:= recover(); r!=nil {
+			Println(r)
+		}
+	}()
+			Println("구매할 Crypto 선택")
+			choiceCrypto := 0
+			getQuote(client,cryptos)
+			Scanln(&choiceCrypto)
+			if choiceCrypto < 0 || choiceCrypto > 10 {
+				panic("없는 코인입니다.")
+			}
+			order(choiceCrypto,chs[choiceCrypto-1],heap[choiceCrypto-1],w)
 }
 func main() {
 	defer func() {
@@ -311,13 +327,20 @@ func main() {
 	}()
 	w := newWallet()
 
-	var bchs = make([]chan float32, 5)
-	var echs = make([]chan float32, 5)
-	bheap := make([]Order,5)
-	eheap := make([]Order,5)
-	for i:=0;i<5;i++ {
-		bchs[i] = make(chan float32)
-		echs[i] = make(chan float32)
+
+	var chs = make([][]chan float32,7)
+	var heap = make([][]Order,7)
+
+//	bheap := make([]Order,5)
+//	eheap := make([]Order,5)
+
+
+	for i:=0;i<7;i++ {
+		chs[i] = make([]chan float32, 5)
+		heap[i] = make([]Order,5)
+		for k:=0;k<5;k++ {
+			chs[i][k] = make(chan float32)
+		}
 	}
 
 	client:= redis.NewClient(&redis.Options{
@@ -357,26 +380,16 @@ func main() {
 			Scanln()
 		case 3:
 			Println("**********주문***********")
-			Println("구매할 Crypto 선택")
-			choiceCrypto := 0
-			getQuote(client,cryptos)
-			Scanln(&choiceCrypto)
-			if choiceCrypto==1 {
-				order(choiceCrypto,bchs,bheap,w)
-			}else if choiceCrypto==2 {
-				order(choiceCrypto,echs,eheap,w)
-			} else {
-				panic("잘못입력하였습니다.")
-			}
+			orderMenu(client,cryptos,chs,heap,w)
 			Println("엔터를 입력하면 메뉴 화면으로 돌아갑니다.")
 			Scanln()
 		case 4:
 			Println("주문확인")
-			Println("------비트코인-----")
-			checkOrder(bheap)
-			Println()
-			Println("------이더리움-----")
-			checkOrder(eheap)
+			for z:=0;z<len(chs);z++ {
+				Printf("------%s-----\n",cryptosname[z])
+				checkOrder(heap[z])
+				Println()
+			}
 			Println("엔터를 입력하면 메뉴 화면으로 돌아갑니다.")
 			Scanln()
 		case 5:
