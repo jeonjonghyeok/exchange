@@ -8,7 +8,7 @@ import (
 	"google.golang.org/grpc"
 	gecko "github.com/superoo7/go-gecko/v3"
 	"github.com/go-redis/redis"
-	//"time"
+	"time"
 )
 
 type Crypto struct{
@@ -134,7 +134,6 @@ func setQuote(client *redis.Client, cryptos []Crypto,ids []string) {
 		vc:= []string{"usd","krw"}
 
 		for {
-			//time.Sleep(time.Second*1)
 		sp, err := cg.SimplePrice(ids,vc)
 		if err!=nil {
 			log.Fatal(err)
@@ -151,6 +150,7 @@ func setQuote(client *redis.Client, cryptos []Crypto,ids []string) {
 		if err != nil {
 			Println(err)
 		}
+		time.Sleep(time.Second*10)
 	}
 }
 func getQuote(client *redis.Client,cryptos []Crypto) {
@@ -187,7 +187,7 @@ func orderTx(choiceCrypto int, amount float32, price float32, chs []chan float32
 			crypto = "bitcoin-cash"
 	}
 	ch = -1
-	for i:=4;i>=0;i-- {
+	for i:=len(heap)-1;i>=0;i-- {
 		if heap[i].status == "주문중" {
 			if heap[i].price ==price &&heap[i].isbuy!=order{
 				ch = heap[i].ch
@@ -265,13 +265,22 @@ func order(choiceCrypto int, chs []chan float32,heap []Order,w *Wallet) {
 	var crypto string
 	switch choiceCrypto {
 		case 1:
-			crypto="bitcoin"
+			crypto = "bitcoin"
 		case 2:
-			crypto="ethereum"
+			crypto = "ethereum"
+		case 3:
+			crypto = "tether"
+		case 4:
+			crypto = "ripple"
+		case 5:
+			crypto = "polkadot"
+		case 6:
+			crypto = "litecoin"
+		case 7:
 	}
-
-	Println("타입 구매량 가격")
-	Println("ex) 매도 200 300")
+	Println()
+	Println("타입 | 구매량 | 가격을 순서대로 입력하세요.")
+	Println("ex) 매도 100 200")
 	Scanln(&order,&amount,&price)
 	if order == "매도" || order == "매수"{
 		if order == "매도" && w.crypto[crypto]<amount	{
@@ -298,9 +307,15 @@ func wallet(w *Wallet) {
 		Println(key,"보유량:",val)
 	}
 }
-func checkOrder(heap []Order) {
-	for i:=0;i<5;i++ {
-		Println(heap[i])
+func checkOrder(heap [][]Order, cryptosname []string) {
+	for i:=0;i<len(cryptosname);i++ {
+				Printf("------%s-----\n",cryptosname[i])
+		for j:=0;j<len(heap[0]);j++ {
+			if heap[i][j].status == "주문중" {
+				Println(heap[i][j])
+			}
+		}
+		Println()
 	}
 
 }
@@ -336,9 +351,9 @@ func main() {
 
 
 	for i:=0;i<7;i++ {
-		chs[i] = make([]chan float32, 5)
-		heap[i] = make([]Order,5)
-		for k:=0;k<5;k++ {
+		chs[i] = make([]chan float32, 10)
+		heap[i] = make([]Order,10)
+		for k:=0;k<10;k++ {
 			chs[i][k] = make(chan float32)
 		}
 	}
@@ -385,11 +400,7 @@ func main() {
 			Scanln()
 		case 4:
 			Println("주문확인")
-			for z:=0;z<len(chs);z++ {
-				Printf("------%s-----\n",cryptosname[z])
-				checkOrder(heap[z])
-				Println()
-			}
+			checkOrder(heap,cryptosname)
 			Println("엔터를 입력하면 메뉴 화면으로 돌아갑니다.")
 			Scanln()
 		case 5:
