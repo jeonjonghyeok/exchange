@@ -146,7 +146,7 @@ func setQuote(client *redis.Client, cryptos []Crypto,ids []string) {
 				Println(err1)
 			}
 			*/
-			err = client.Set(client.Context(),Sprint("%s",cryptos[i].name),cryptos[i].price,0).Err()
+			err = client.Set(client.Context(),Sprintf("%s",cryptos[i].name),cryptos[i].price,0).Err()
 		}
 		if err != nil {
 			Println(err)
@@ -155,7 +155,7 @@ func setQuote(client *redis.Client, cryptos []Crypto,ids []string) {
 }
 func getQuote(client *redis.Client,cryptos []Crypto) {
 		for i:=0;i<len(cryptos);i++ {
-		val, err := client.Get(client.Context(),Sprint("%s",cryptos[i].name)).Result()
+		val, err := client.Get(client.Context(),Sprintf("%s",cryptos[i].name)).Result()
 		Println(i+1,cryptos[i].name,val)
 			if err != nil {
 				Println(err)
