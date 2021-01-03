@@ -133,7 +133,7 @@ func setQuote(client *redis.Client, cryptos []Crypto,ids []string) {
 		//ids:= []string{"bitcoin","ethereum","tether","ripple","polkadot","litecoin","bitcoin-cash"}
 		vc:= []string{"usd","krw"}
 
-		for {
+		//for {
 		sp, err := cg.SimplePrice(ids,vc)
 		if err!=nil {
 			log.Fatal(err)
@@ -150,8 +150,16 @@ func setQuote(client *redis.Client, cryptos []Crypto,ids []string) {
 		if err != nil {
 			Println(err)
 		}
-		time.Sleep(time.Second*10)
-	}
+		for {
+			for j:=0;j<len(cryptos);j++ {
+				err1:= client.LPush(client.Context(),Sprintf("%s",cryptos[j].name),cryptos[j].price,0).Err()
+				if err1 != nil {
+					Println(err)
+				}
+				time.Sleep(time.Second*10)
+			}
+		}
+	//}
 }
 func getQuote(client *redis.Client,cryptos []Crypto) {
 		for i:=0;i<len(cryptos);i++ {
@@ -278,7 +286,7 @@ func order(choiceCrypto int, chs []chan float32,heap []Order,w *Wallet) {
 			crypto = "litecoin"
 		case 7:
 	}
-	Println()
+
 	Println("타입 | 구매량 | 가격을 순서대로 입력하세요.")
 	Println("ex) 매도 100 200")
 	Scanln(&order,&amount,&price)
