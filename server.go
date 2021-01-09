@@ -6,9 +6,6 @@ import (
 	. "fmt"
 	"github.com/tutorialedge/go-grpc-beginners-tutorial/chat"
 	"google.golang.org/grpc"
-	_ "github.com/superoo7/go-gecko/v3"
-	"github.com/go-redis/redis"
-	_ "time"
 	"quote"
 )
 type Wallet struct {
@@ -21,12 +18,6 @@ type Order struct {
 	amount float32
 	price float32
 	ch int
-}
-// heap
-type minheap struct {
-    heapArray []Order
-    size      int
-    maxsize   int
 }
 func newWallet() *Wallet {
 	w:= Wallet{}
@@ -192,7 +183,7 @@ func checkOrder(heap [][]Order, cryptosname []string) {
 	}
 
 }
-func orderMenu(client *redis.Client, cryptos []quote.Crypto, chs [][]chan float32,heap [][]Order,w *Wallet) {
+func orderMenu(cryptos []quote.Crypto, chs [][]chan float32,heap [][]Order,w *Wallet, cryptosname []string) {
 	defer func() {
 		if r:= recover(); r!=nil {
 			Println(r)
@@ -200,7 +191,7 @@ func orderMenu(client *redis.Client, cryptos []quote.Crypto, chs [][]chan float3
 	}()
 			Println("구매할 Crypto 선택")
 			choiceCrypto := 0
-			quote.GetQuote(client)
+			quote.GetQuote(cryptosname)
 			Scanln(&choiceCrypto)
 			if choiceCrypto < 0 || choiceCrypto > 10 {
 				panic("없는 코인입니다.")
@@ -228,16 +219,9 @@ func main() {
 		}
 	}
 
-	client:= redis.NewClient(&redis.Options{
-		Addr: "localhost:6379",
-		Password: "",
-		DB: 0,
-	})
 		var cryptosname []string = []string{"bitcoin","ethereum","tether","ripple","polkadot","litecoin","bitcoin-cash"}
-		go quote.SetQuote(client, cryptosname)
 	for {
 
-	Println("1. 시세 확인")
 	Println("2. 지갑 확인")
 	Println("3. 주문")
 	Println("4. 주문 확인")
@@ -247,11 +231,6 @@ func main() {
 	Scanln(&num)
 
 	switch num {
-		case 1:
-			Println("**********시세확인***********")
-			quote.GetQuote(client)
-			Println("엔터를 입력하면 메뉴 화면으로 돌아갑니다.")
-			Scanln()
 		case 2:
 			Println("**********지갑***********")
 			wallet(w)
@@ -259,7 +238,7 @@ func main() {
 			Scanln()
 		case 3:
 			Println("**********주문***********")
-			orderMenu(client,quote.GetCryptos(),chs,heap,w)
+			orderMenu(quote.GetCryptos(),chs,heap,w,cryptosname)
 			Println("엔터를 입력하면 메뉴 화면으로 돌아갑니다.")
 			Scanln()
 		case 4:
