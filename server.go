@@ -6,15 +6,8 @@ import (
 	. "fmt"
 	"github.com/tutorialedge/go-grpc-beginners-tutorial/chat"
 	"google.golang.org/grpc"
-	gecko "github.com/superoo7/go-gecko/v3"
-	"github.com/go-redis/redis"
-	"time"
+	"quote"
 )
-
-type Crypto struct{
-	name string
-	price float32
-}
 type Wallet struct {
 	crypto map[string]float32
 	krw float32
@@ -26,141 +19,12 @@ type Order struct {
 	price float32
 	ch int
 }
-// heap
-type minheap struct {
-    heapArray []Order
-    size      int
-    maxsize   int
-}
-
-func newMinHeap(maxsize int) *minheap {
-    minheap := &minheap{
-        heapArray: []Order{},
-        size:      0,
-        maxsize:   maxsize,
-    }
-    return minheap
-}
-
-func (m *minheap) leaf(index int) bool {
-    if index >= (m.size/2) && index <= m.size {
-        return true
-    }
-    return false
-}
-
-func (m *minheap) parent(index int) int {
-    return (index - 1) / 2
-}
-
-func (m *minheap) leftchild(index int) int {
-    return 2*index + 1
-}
-
-func (m *minheap) rightchild(index int) int {
-    return 2*index + 2
-}
-
-func (m *minheap) insert(item Order) error {
-    if m.size >= m.maxsize {
-        return Errorf("Heap is ful")
-    }
-    m.heapArray = append(m.heapArray, item)
-    m.size++
-    m.upHeapify(m.size - 1)
-    return nil
-}
-
-func (m *minheap) swap(first, second int) {
-    temp := m.heapArray[first]
-    m.heapArray[first] = m.heapArray[second]
-    m.heapArray[second] = temp
-}
-
-func (m *minheap) upHeapify(index int) {
-    for m.heapArray[index].price < m.heapArray[m.parent(index)].price {
-        m.swap(index, m.parent(index))
-        index = m.parent(index)
-    }
-}
-
-func (m *minheap) downHeapify(current int) {
-    if m.leaf(current) {
-        return
-    }
-    smallest := current
-    leftChildIndex := m.leftchild(current)
-    rightRightIndex := m.rightchild(current)
-    //If current is smallest then return
-    if leftChildIndex < m.size && m.heapArray[leftChildIndex].price < m.heapArray[smallest].price {
-        smallest = leftChildIndex
-			}
-    if rightRightIndex < m.size && m.heapArray[rightRightIndex].price < m.heapArray[smallest].price {
-        smallest = rightRightIndex
-    }
-    if smallest != current {
-        m.swap(current, smallest)
-        m.downHeapify(smallest)
-    }
-    return
-}
-func (m *minheap) buildMinHeap() {
-    for index := ((m.size / 2) - 1); index >= 0; index-- {
-        m.downHeapify(index)
-    }
-}
-
-func (m *minheap) remove() Order {
-    top := m.heapArray[0]
-    m.heapArray[0] = m.heapArray[m.size-1]
-    m.heapArray = m.heapArray[:(m.size)-1]
-    m.size--
-    m.downHeapify(0)
-    return top
-}
-
-
-
 func newWallet() *Wallet {
 	w:= Wallet{}
 	w.krw = 100000
 	w.crypto = map[string]float32{}
 	w.crypto["bitcoin"]=10000
 	return &w
-}
-func setQuote(client *redis.Client, cryptos []Crypto,ids []string) {
-		cg:= gecko.NewClient(nil)
-		//ids:= []string{"bitcoin","ethereum","tether","ripple","polkadot","litecoin","bitcoin-cash"}
-		vc:= []string{"usd","krw"}
-
-		for {
-		sp, err := cg.SimplePrice(ids,vc)
-		if err!=nil {
-			log.Fatal(err)
-		}
-		for i:=0;i<len(cryptos);i++ {
-			cryptos[i].price = (*sp)[cryptos[i].name]["usd"]
-			/*json, err1 := json.Marshal(cryptos[i])
-			if err1 != nil {
-				Println(err1)
-			}
-			*/
-			err = client.Set(client.Context(),Sprintf("%s",cryptos[i].name),cryptos[i].price,0).Err()
-		}
-		if err != nil {
-			Println(err)
-		}
-		time.Sleep(time.Second*10)
-	}
-}
-func getQuote(client *redis.Client,cryptos []Crypto) {
-		for i:=0;i<len(cryptos);i++ {
-		val, err := client.Get(client.Context(),Sprintf("%s",cryptos[i].name)).Result()
-		Println(i+1,cryptos[i].name,val)
-			if err != nil {
-				Println(err)
-			}
-		}
 }
 func orderTx(choiceCrypto int, amount float32, price float32, chs []chan float32,heap []Order, order string,w *Wallet) {
 	defer func() {
@@ -319,7 +183,7 @@ func checkOrder(heap [][]Order, cryptosname []string) {
 	}
 
 }
-func orderMenu(client *redis.Client, cryptos []Crypto, chs [][]chan float32,heap [][]Order,w *Wallet) {
+func orderMenu(cryptos []quote.Crypto, chs [][]chan float32,heap [][]Order,w *Wallet, cryptosname []string) {
 	defer func() {
 		if r:= recover(); r!=nil {
 			Println(r)
@@ -327,7 +191,7 @@ func orderMenu(client *redis.Client, cryptos []Crypto, chs [][]chan float32,heap
 	}()
 			Println("구매할 Crypto 선택")
 			choiceCrypto := 0
-			getQuote(client,cryptos)
+			quote.GetQuote(cryptosname)
 			Scanln(&choiceCrypto)
 			if choiceCrypto < 0 || choiceCrypto > 10 {
 				panic("없는 코인입니다.")
@@ -346,9 +210,6 @@ func main() {
 	var chs = make([][]chan float32,7)
 	var heap = make([][]Order,7)
 
-//	bheap := make([]Order,5)
-//	eheap := make([]Order,5)
-
 
 	for i:=0;i<7;i++ {
 		chs[i] = make([]chan float32, 10)
@@ -358,22 +219,9 @@ func main() {
 		}
 	}
 
-	client:= redis.NewClient(&redis.Options{
-		Addr: "localhost:6379",
-		Password: "",
-		DB: 0,
-	})
-		cryptos := make([]Crypto,7)
 		var cryptosname []string = []string{"bitcoin","ethereum","tether","ripple","polkadot","litecoin","bitcoin-cash"}
-		for j:=0;j<len(cryptos);j++ {
-			cryptos[j].name = cryptosname[j]
-		}
-
-		go setQuote(client, cryptos,cryptosname)
-
 	for {
 
-	Println("1. 시세 확인")
 	Println("2. 지갑 확인")
 	Println("3. 주문")
 	Println("4. 주문 확인")
@@ -383,11 +231,6 @@ func main() {
 	Scanln(&num)
 
 	switch num {
-		case 1:
-			Println("**********시세확인***********")
-			getQuote(client,cryptos)
-			Println("엔터를 입력하면 메뉴 화면으로 돌아갑니다.")
-			Scanln()
 		case 2:
 			Println("**********지갑***********")
 			wallet(w)
@@ -395,7 +238,7 @@ func main() {
 			Scanln()
 		case 3:
 			Println("**********주문***********")
-			orderMenu(client,cryptos,chs,heap,w)
+			orderMenu(quote.GetCryptos(),chs,heap,w,cryptosname)
 			Println("엔터를 입력하면 메뉴 화면으로 돌아갑니다.")
 			Scanln()
 		case 4:
