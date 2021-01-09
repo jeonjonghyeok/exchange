@@ -18,8 +18,8 @@ func main() {
 		Println("경과시간:",t,"초")
 		Println()
 		quote.GetQuote(cryptosname)
-		time.Sleep(time.Second*10)
-		t=t+10
+		time.Sleep(time.Second*1)
+		t++
 	}
 
 	Scanln()
