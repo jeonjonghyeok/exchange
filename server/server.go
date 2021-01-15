@@ -181,7 +181,6 @@ func checkOrder(heap [][]Order, cryptosname []string) {
 		}
 		Println()
 	}
-
 }
 func orderMenu(cryptos []quote.Crypto, chs [][]chan float32,heap [][]Order,w *Wallet, cryptosname []string) {
 	defer func() {
