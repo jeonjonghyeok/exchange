@@ -1,0 +1,9 @@
+2021/01/18 00:11:32 test
+time="2021-01-18T00:20:02+09:00" level=info msg="Application start..." Application=TestApp Version=v0.1.1
+time="2021-01-18T00:20:02+09:00" level=error msg="Not fond user" ID=jjh
+time="2021-01-18T00:20:29+09:00" level=info msg="Application start..." Application=TestApp Version=v0.1.1
+time="2021-01-18T00:20:29+09:00" level=error msg="Not fond user" ID=jjh
+time="2021-01-18T00:20:29+09:00" level=info msg="this iserr"
+{"Application":"TestApp","Version":"v0.1.1","level":"info","msg":"Application start...","time":"2021-01-18T00:21:22+09:00"}
+{"ID":"jjh","level":"error","msg":"Not fond user","time":"2021-01-18T00:21:22+09:00"}
+{"level":"info","msg":"this iserr","time":"2021-01-18T00:21:22+09:00"}
