@@ -7,7 +7,9 @@ import (
 )
 
 func main() {
-	service := "0.0.0.0:1201"
+	service := os.Args[1]
+	//service := "0.0.0.0:1201"
+	service = "127.0.0.1:" + service
 	tcpAddr, err := net.ResolveTCPAddr("tcp4", service)
 	checkError(err)
 
